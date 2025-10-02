@@ -8,6 +8,11 @@
     <link rel="icon" type="image/x-icon" href="images/icon512.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#007bff">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="tfsm.js"></script>
     <style>
@@ -249,6 +254,41 @@
             display: inline-block;
         }
 
+        
+    .install-container {
+            text-align: center;
+            margin-top: 2rem;
+        }
+        
+        #installPWA {
+            padding: 15px 30px;
+            background: linear-gradient(to right, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+            align-items: center;
+        }
+        
+        #installPWA i {
+            margin-right: 10px;
+        }
+        
+        #installPWA:hover {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.4);
+        }
+        
+        #installPWA:active {
+            transform: translateY(0);
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 900px) { /* Two-column view disabled below 900px */
             .two-column .main-content {
@@ -357,6 +397,12 @@
     <footer id="main-footer">
         <p>&copy; 2024 Network Log Parser. Created by **Enos Rigor Tan** for internal use.</p>
     </footer>
+
+    <div class="install-container">
+            <button id="installPWA" style="display: none;" >
+                <i class="fas fa-download"></i> Install App
+            </button>
+        </div>
 
     <script src="template_data.js"></script> 
     <script>
