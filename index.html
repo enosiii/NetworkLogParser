@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Log Parser</title>
+    
+    <link rel="icon" type="image/x-icon" href="images/icon512.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007bff">
+
+    <script src="tfsm.js"></script>
+    <style>
+        /* General & Responsive Design */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 10px; 
+            background-color: #f7f9fc;
+            color: #333;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .container {
+            max-width: 1200px; /* Increased max width for 2-column view */
+            margin: 0 auto;
+            padding: 10px;
+        }
+        .main-content {
+            display: flex;
+            flex-direction: column; /* Default: Single Column (stacked) */
+        }
+        /* New Styles for 2-Column Layout */
+        .two-column .main-content {
+            flex-direction: row;
+            gap: 20px;
+        }
+        .two-column .controls, .two-column .output {
+            flex: 1; /* Each takes half the space */
+            margin-bottom: 0; /* Remove bottom margin when side-by-side */
+        }
+
+        .controls, .output { 
+            margin-bottom: 25px; 
+            padding: 20px; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 8px; 
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        
+        /* Header Styling */
+        h1 { 
+            /* Use flexbox to easily align the icon and text */
+            display: flex;       
+            align-items: center; /* Vertically center items */
+            gap: 10px;           /* Spacing between icon and text */
+            color: #007bff; 
+            border-bottom: 2px solid #e0e0e0; 
+            padding-bottom: 5px; 
+            margin-bottom: 20px; 
+        }
+        #header-icon {
+            /* Set height relative to the H1's font size */
+            height: 1.5em; 
+            width: 1.5em;
+            vertical-align: middle; 
+        }
+        h2 { color: #007bff; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px; margin-bottom: 20px; }
+        
+        /* Form Elements */
+        label { font-weight: 600; margin-right: 15px; display: inline-block; }
+        .selection-group { margin-bottom: 15px; }
+        .platform-options label { margin-right: 20px; }
+        select, button, input[type="number"] { 
+            padding: 10px 15px; 
+            font-size: 15px; 
+            margin-right: 10px; 
+            border-radius: 5px; 
+            border: 1px solid #ccc;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        select:focus, input[type="number"]:focus { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); outline: none; }
+        button { background-color: #007bff; color: white; border: none; }
+        button:hover:not(:disabled) { background-color: #0056b3; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        
+        textarea { 
+            width: 100%;
+            height: 180px; 
+            margin-top: 10px; 
+            padding: 15px; 
+            border: 1px solid #ccc; 
+            border-radius: 5px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        /* --- Floating Status Message (Updated) --- */
+        #floating-status-wrapper {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000; /* Ensure it stays above all other content */
+            width: 90%;
+            max-width: 600px; /* Limit the width for better readability */
+            pointer-events: none; /* Allows clicks to pass through when hidden/empty */
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #status-container { 
+            padding: 15px 20px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+
+        /* Status Colors */
+        .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status-info { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+
+        /* Class to make the floating alert visible */
+        .show-alert {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        /* --- End Floating Status Message --- */
+
+        /* Table Preview */
+        .table-wrapper { 
+            overflow-x: auto; 
+            margin-top: 15px;
+        }
+        table { 
+            min-width: 600px; 
+            border-collapse: collapse; 
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px 15px; 
+            text-align: left; 
+            font-size: 0.9em; 
+            white-space: nowrap; 
+        }
+        th { 
+            background-color: #007bff; 
+            color: white; 
+            font-weight: 600; 
+            position: sticky; 
+            top: 0;
+        }
+        
+        /* JSON Output Styles - Added relative positioning to parent container */
+        .json-container {
+            position: relative;
+            margin-top: 20px;
+        }
+        #json-output {
+            margin-top: 5px; 
+            padding: 15px;
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.85em;
+            /* Added padding-top to make room for the absolute button */
+            padding-top: 40px; 
+        }
+        /* Copy Button Styling - Absolute position inside .json-container */
+        #copy-json-button {
+            position: absolute;
+            top: 10px;
+            right: 0;
+            background-color: #6c757d;
+            border: none;
+            padding: 5px 10px;
+            font-size: 0.85em;
+            transition: background-color 0.2s;
+            z-index: 10;
+        }
+        #copy-json-button:hover:not(:disabled) {
+            background-color: #5a6268;
+        }
+        /* Custom Download Button */
+        #download-button { 
+            background-color: #28a745; 
+            margin-top: 10px;
+        }
+        #download-button:hover:not(:disabled) { 
+            background-color: #1e7e34;
+        }
+
+        /* Toggle Switch Styling */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #007bff;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        /* Added styling for the single emoji label */
+        #layout-emoji {
+            font-size: 1.5em;
+            margin: 0 10px;
+            line-height: 34px; /* Center with the switch */
+            vertical-align: top;
+            display: inline-block;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 900px) { /* Two-column view disabled below 900px */
+            .two-column .main-content {
+                flex-direction: column;
+                gap: 0;
+            }
+            .two-column .controls, .two-column .output {
+                flex: none;
+                width: auto;
+            }
+        }
+        @media (max-width: 600px) {
+            h1 { font-size: 1.5em; }
+            h2 { font-size: 1.2em; }
+            .controls, .output { padding: 15px; }
+            .selection-group, .platform-options label { margin-bottom: 8px; }
+            select, button { width: 100%; margin-bottom: 10px;}
+            input[type="number"] { width: 10%; margin-bottom: 10px; text-align: center;}
+            .preview-settings { flex-direction: column; align-items: flex-start; }
+            .preview-settings label, .preview-settings input { margin: 5px 0; }
+        }
+
+        /* --- Footer Styling --- */
+        #main-footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px; 
+            border-top: 1px solid #e0e0e0;
+            color: #888;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body class="single-column">
+
+    <div id="floating-status-wrapper">
+        <div id="status-container"></div>
+    </div>
+    <div class="container">
+        
+        <div class="header-bar">
+            <h1>
+                <img src="images/icon512.png" alt="App Icon" id="header-icon">
+                Network Log Parser & Converter
+            </h1>
+            
+            <div class="toggle-control">
+                <span id="layout-emoji">1️⃣</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="layout-toggle" onchange="toggleLayout()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="controls">
+                <h2>1. Select Network and Command</h2>
+                
+                <div class="selection-group">
+                    <label for="vendor-select">Network Vendor:</label>
+                    <select id="vendor-select" onchange="updatePlatformOptions()"></select>
+                </div>
+                
+                <div class="selection-group">
+                    <label>Platform/OS:</label>
+                    <div id="platform-options" class="platform-options">
+                        </div>
+                </div>
+
+                <label for="command-select">Command:</label>
+                <select id="command-select"></select>
+                
+                <div class="preview-settings" style="margin-top: 20px;">
+                    <label for="rows-to-display">Preview Rows:</label>
+                    <input type="number" id="rows-to-display" value="7" min="1" max="100">
+                </div>
+
+                <br>
+
+                <h2>2. Paste Log Content & Run</h2>
+                <textarea id="log-input" placeholder="Paste your CLI output here..."></textarea>
+                <button onclick="processLog()">Run Conversion & Preview</button>
+            </div>
+
+            <div class="output">
+                <h2>3. Output</h2>
+                <button id="download-button" onclick="downloadCsvFromCache()" disabled>Download CSV</button>
+                
+                <h3 style="margin-top: 20px; color: #555;">Parsed Table Preview</h3>
+                <div class="table-wrapper">
+                    <div id="table-preview">No data parsed yet.</div>
+                </div>
+
+                <h3 style="margin-top: 20px; color: #555;">Raw JSON Output</h3>
+                
+                <div class="json-container">
+                    <button id="copy-json-button" onclick="copyJsonOutput()" disabled>Copy</button>
+                    <pre id="json-output">No data parsed yet.</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <footer id="main-footer">
+        <p>&copy; 2024 Network Log Parser. Created by **Enos Rigor Tan** for internal use.</p>
+    </footer>
+
+    <script src="template_data.js"></script> 
+    <script>
+        let cachedCsvData = "";
+        let statusTimeout = null; // Variable to hold the timeout reference
+
+        // Vendor platforms data (kept for completeness)
+        const vendorPlatforms = {
+            'Alcatel': ['alcatel_aos', 'alcatel_sros'],
+            'Allied Telesis': ['allied_telesis_awplus'],
+            'Arista': ['arista_eos'],
+            'Aruba': ['aruba_aoscx', 'aruba_os'],
+            'Avaya': ['avaya_ers', 'avaya_vsp'],
+            'Broadcom': ['broadcom_icos'],
+            'Brocade': ['brocade_fastiron'],
+            'Checkpoint': ['checkpoint_gaia'],
+            'Ciena': ['ciena_saos'],
+            'Cisco': ['cisco_asa', 'cisco_ios', 'cisco_nvfis', 'cisco_nxos', 'cisco_s300', 'cisco_wlc_ssh', 'cisco_xr'],
+            'Dell': ['dell_force10', 'dell_powerconnect'],
+            'Edgecore': ['edgecore'],
+            'Eltex': ['eltex'],
+            'Ericsson': ['ericsson_ipos'],
+            'Extreme': ['extreme_exos'],
+            'Fortinet': ['fortinet'],
+            'HP': ['hp_comware', 'hp_procurve'],
+            'Huawei': ['huawei_ont', 'huawei_smartax', 'huawei_vrp'],
+            'Juniper': ['juniper_junos'],
+            'Linux': ['linux'],
+            'Mikrotik': ['mikrotik_routeros'],
+            'One Access': ['oneaccess_oneos'],
+            'Palo Alto': ['paloalto_panos'],
+            'Ruckus': ['ruckus_fastiron'],
+            'Ubiquiti': ['ubiquiti_edgerouter', 'ubiquiti_edgeswitch'],
+            'ZTE': ['zte_zxros'],
+            'Zyxel': ['zyxel_os'],
+        };
+
+        const DEFAULT_VENDOR = 'Cisco';
+        const DEFAULT_PLATFORM = 'cisco_ios';
+
+        // --- UI Helper Functions ---
+
+        function getSelectedVendor() {
+            return document.getElementById('vendor-select').value;
+        }
+
+        function getSelectedPlatform() {
+            const radio = document.querySelector('input[name="platform"]:checked');
+            return radio ? radio.value : null;
+        }
+
+        /**
+         * Initializes the Vendor dropdown and sets up the default platform.
+         */
+        function initializeVendor() {
+            const vendorSelect = document.getElementById('vendor-select');
+            
+            // Populate Vendor Dropdown
+            Object.keys(vendorPlatforms).sort().forEach(vendor => {
+                const option = document.createElement('option');
+                option.value = vendor;
+                option.textContent = vendor;
+                vendorSelect.appendChild(option);
+            });
+            
+            // Set Default Vendor and trigger platform update
+            vendorSelect.value = DEFAULT_VENDOR;
+            updatePlatformOptions(DEFAULT_PLATFORM);
+        }
+
+        /**
+         * Updates the radio buttons based on the selected Vendor.
+         */
+        function updatePlatformOptions(defaultPlatform = null) {
+            const vendor = getSelectedVendor();
+            const platforms = vendorPlatforms[vendor] || [];
+            const container = document.getElementById('platform-options');
+            container.innerHTML = '';
+            
+            let firstPlatform = null;
+
+            platforms.forEach(platformKey => {
+
+                // --- ORIGINAL LABEL LOGIC ---
+                let labelText = '';
+                const parts = platformKey.split('_');
+
+                if (parts.length > 1) {
+                    if (parts.length == 2) { 
+                    labelText = parts.slice(1).map(s => s.toUpperCase()).join('/');
+                    } else if (parts.length = 3) { // NOTE: Logical error (assignment vs comparison) retained from previous code for consistency
+                        if (parts[0] == "cisco"){ 
+                            labelText = parts.slice(1).map(s => s.toUpperCase()).join(' ');
+                        }
+                        else if (parts[0] == "allied"){
+                            labelText = parts.slice(2).map(s => s.toUpperCase()).join('/');
+                        }
+                        else {
+                            labelText = parts.slice(2).map(s => s.toUpperCase()).join('/');
+                        }
+                    }
+                } else { 
+                    labelText = platformKey.charAt(0).toUpperCase() + platformKey.slice(1);
+                }
+                // --- END ORIGINAL LABEL LOGIC ---
+                
+                const label = document.createElement('label');
+                const input = document.createElement('input');
+                
+                input.type = 'radio';
+                input.name = 'platform';
+                input.value = platformKey;
+                input.onchange = updateCommandDropdown;
+
+                label.appendChild(input);
+                label.appendChild(document.createTextNode(' ' + labelText));
+                container.appendChild(label);
+                
+                if (!firstPlatform) firstPlatform = platformKey;
+            });
+            
+            // Set the checked radio button
+            const platformToSelect = defaultPlatform || firstPlatform;
+            const defaultRadio = document.querySelector(`input[value="${platformToSelect}"]`);
+            if (defaultRadio) {
+                defaultRadio.checked = true;
+            }
+            
+            // Always update the commands when the platform options change
+            updateCommandDropdown();
+        }
+
+        /**
+         * Sorts commands alphabetically and updates the command dropdown.
+         */
+        function updateCommandDropdown() {
+            const platform = getSelectedPlatform();
+            const selectElement = document.getElementById('command-select');
+            selectElement.innerHTML = ''; 
+
+            if (!platform || !templates[platform]) {
+                setStatus('No templates found for the selected platform.', 'error');
+                return;
+            }
+
+            const commands = templates[platform];
+            const commandNames = Object.keys(commands).sort();
+
+            commandNames.forEach(commandName => {
+                const option = document.createElement('option');
+                option.value = commandName;
+                option.textContent = commandName;
+                selectElement.appendChild(option);
+            });
+            
+            setStatus('', 'info'); // Clear status on successful update
+        }
+        
+        // Initialize the UI on page load
+        document.addEventListener('DOMContentLoaded', initializeVendor);
+
+
+        // --- Toggle Layout Function ---
+        function toggleLayout() {
+            const body = document.body;
+            const toggle = document.getElementById('layout-toggle');
+            const emojiSpan = document.getElementById('layout-emoji');
+
+            if (toggle.checked) {
+                body.classList.add('two-column');
+                emojiSpan.textContent = '2️⃣'; // Two Column active
+            } else {
+                body.classList.remove('two-column');
+                emojiSpan.textContent = '1️⃣'; // Single Column active
+            }
+        }
+        
+        /**
+         * Sets the floating status message with proper styling and auto-hides after 10 seconds.
+         */
+        function setStatus(message, type = 'info') {
+            const container = document.getElementById('status-container');
+            const wrapper = document.getElementById('floating-status-wrapper');
+
+            // 1. Clear any existing timeout
+            if (statusTimeout) {
+                clearTimeout(statusTimeout);
+                statusTimeout = null;
+            }
+
+            // If the message is empty, just hide and exit
+            if (!message) {
+                wrapper.classList.remove('show-alert');
+                container.textContent = '';
+                return;
+            }
+
+            // 2. Set the message and styles
+            container.textContent = message;
+            container.className = 'status-container ' + (type === 'success' ? 'status-success' : type === 'error' ? 'status-error' : 'status-info');
+            
+            // 3. Show the floating alert
+            wrapper.classList.add('show-alert');
+            
+            // 4. Set timeout to auto-hide after 5 seconds (5000 milliseconds)
+            statusTimeout = setTimeout(() => {
+                wrapper.classList.remove('show-alert');
+                // Optional: Clear the text completely after fade out
+                setTimeout(() => {
+                    container.textContent = '';
+                }, 500); // 500ms matches the CSS transition time
+            }, 5000);
+        }
+
+        // --- Copy JSON Output Function ---
+        function copyJsonOutput() {
+            const jsonOutput = document.getElementById('json-output');
+            const copyButton = document.getElementById('copy-json-button');
+            const textToCopy = jsonOutput.textContent.trim(); 
+
+            if (textToCopy === 'No data parsed yet.' || textToCopy === 'Processing...' || textToCopy.startsWith('Error during parsing')) {
+                return;
+            }
+
+            // Use the modern clipboard API
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // Success feedback
+                copyButton.textContent = 'Copied!';
+                copyButton.style.backgroundColor = '#28a745';
+                setStatus('JSON output copied to clipboard!', 'success');
+
+                // Revert text after 5 seconds
+                setTimeout(() => {
+                    copyButton.textContent = 'Copy';
+                    copyButton.style.backgroundColor = '#6c757d';
+                }, 5000);
+
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                setStatus('Failed to copy JSON. Please copy manually.', 'error');
+            });
+        }
+        // End of Copy JSON Output Function
+
+        function processLog() {
+            const platform = getSelectedPlatform();
+            const command = document.getElementById('command-select').value;
+            const logContent = document.getElementById('log-input').value;
+            const downloadButton = document.getElementById('download-button');
+            const jsonOutput = document.getElementById('json-output');
+            const copyButton = document.getElementById('copy-json-button'); 
+            
+            if (!platform || !command || !templates[platform] || !templates[platform][command]) {
+                setStatus('Please select a valid platform and command.', 'error');
+                jsonOutput.textContent = 'No data parsed yet.';
+                copyButton.disabled = true;
+                return;
+            }
+
+            const templateObj = templates[platform][command];
+
+            setStatus('Processing...', 'info');
+            downloadButton.disabled = true;
+            copyButton.disabled = true;
+            document.getElementById('table-preview').innerHTML = 'Processing...';
+            jsonOutput.textContent = 'Processing...';
+            cachedCsvData = "";
+
+            if (!logContent) {
+                setStatus('Please paste log content.', 'error');
+                document.getElementById('table-preview').innerHTML = 'No data parsed yet.';
+                jsonOutput.textContent = 'No data parsed yet.';
+                return;
+            }
+
+            try {
+                // 1. TextFSM Parse (Log to JSON)
+                const fsm = new TextFSM(templateObj.content);
+                const jsonData = fsm.parseTextToDicts(logContent); 
+
+                // 2. Display Raw JSON Data
+                jsonOutput.textContent = JSON.stringify(jsonData, null, 2);
+                copyButton.disabled = false;
+
+
+                if (jsonData.length === 0) {
+                    setStatus('⚠️ Parsing successful, but no records were extracted. Check your Platform/OS, Log, and Command', 'info');
+                    document.getElementById('table-preview').innerHTML = 'No records found.';
+                    copyButton.disabled = true; 
+                    return;
+                }
+                
+                // 3. Convert JSON to CSV & Cache Data
+                const csvData = jsonToCsv(jsonData);
+                cachedCsvData = csvData;
+
+                // 4. Display Preview
+                displayTablePreview(jsonData);
+                
+                setStatus(`✅ Successfully parsed ${jsonData.length} records.`, 'success');
+                downloadButton.disabled = false;
+                
+            } catch (e) {
+                setStatus('❌ An error occurred during parsing: ' + e.message, 'error');
+                document.getElementById('table-preview').innerHTML = 'Error during parsing.';
+                jsonOutput.textContent = 'Error during parsing: ' + e.message;
+                copyButton.disabled = true;
+                console.error(e);
+            }
+        }
+
+        function displayTablePreview(jsonData) {
+            const previewDiv = document.getElementById('table-preview');
+            const maxRowsInput = document.getElementById('rows-to-display').value;
+            const maxRows = Math.max(1, parseInt(maxRowsInput) || 7);
+            
+            const headers = Object.keys(jsonData[0]);
+            let html = '<table><thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            const rowsToShow = jsonData.slice(0, maxRows);
+            rowsToShow.forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    const value = Array.isArray(row[header]) ? row[header].join('; ') : row[header];
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+
+            if (jsonData.length > maxRows) {
+                html += `<p style="margin-top:10px;">... Showing first ${maxRows} of ${jsonData.length} total records.</p>`;
+            } else if (jsonData.length > 0) {
+                html += `<p style="margin-top:10px;">Showing all ${jsonData.length} total records.</p>`;
+            }
+
+            previewDiv.innerHTML = html;
+        }
+
+
+        // --- CSV Conversion and Download Functions ---
+
+        const jsonToCsv = (data) => {
+            if (data.length === 0) return '';
+            const headers = Object.keys(data[0]);
+            
+            const escapeValue = (value) => {
+                if (value === null || value === undefined) return '';
+                let str = Array.isArray(value) ? value.join('; ') : String(value);
+                
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    str = str.replace(/"/g, '""');
+                    return `"${str}"`;
+                }
+                return str;
+            };
+
+            const headerRow = headers.map(escapeValue).join(',');
+            const dataRows = data.map(obj => 
+                headers.map(header => escapeValue(obj[header])).join(',')
+            );
+
+            return [headerRow, ...dataRows].join('\r\n');
+        };
+
+        function downloadCsvFromCache() {
+            if (!cachedCsvData) {
+                setStatus('Error: No data to download.', 'error');
+                return;
+            }
+            
+            const platform = getSelectedPlatform();
+            const command = document.getElementById('command-select').value.replace(/\s/g, '_');
+            
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+            const timeStr = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+            
+            const filename = `${platform}_${command}_${dateStr}_${timeStr}.csv`;
+
+            const blob = new Blob([cachedCsvData], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            setStatus(`✅ File ${filename} downloaded successfully.`, 'success');
+        }
+
+    </script>
+
+    
+    <script src="install.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then((registration) => {
+            console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch((error) => {
+            console.error('Service Worker registration failed:', error);
+            });
+        }
+    </script>
+
+</body>
+</html>
