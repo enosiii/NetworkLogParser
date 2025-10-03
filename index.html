@@ -67,6 +67,9 @@
             padding-bottom: 5px; 
             margin-bottom: 20px; 
         }
+        #installPWA {
+            vertical-align: middle; 
+        }
         #header-icon {
             /* Set height relative to the H1's font size */
             height: 1.5em; 
@@ -257,7 +260,8 @@
         
     .install-container {
             text-align: center;
-            margin-top: 2rem;
+            vertical-align: middle; 
+            margin-bottom: 1rem;
         }
         
         #installPWA {
@@ -337,7 +341,7 @@
                 <img src="images/icon512.png" alt="App Icon" id="header-icon">
                 Network Log Parser & Converter
             </h1>
-            
+
             <div class="toggle-control">
                 <span id="layout-emoji"><i class="fa-solid fa-1"></i></span>
                 <label class="toggle-switch">
@@ -346,6 +350,13 @@
                 </label>
             </div>
         </div>
+        <div class="install-container">
+            <button id="installPWA" style="display: none;" >
+                <i class="fas fa-download"></i> Install App
+            </button>
+        </div>
+
+        
         
         <div class="main-content">
             <div class="controls">
@@ -401,11 +412,7 @@
         <p>&copy; 2025 Network Log Parser • Created by <strong>Enos Rigor Tan<strong> </p>
     </footer>
 
-    <div class="install-container">
-            <button id="installPWA" style="display: none;" >
-                <i class="fas fa-download"></i> Install App
-            </button>
-        </div>
+    
 
     <script src="template_data.js"></script> 
     <script>
