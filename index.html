@@ -299,6 +299,9 @@
                 flex: none;
                 width: auto;
             }
+            .toggle-control {
+            display: none; /* Hide toggle on small screens */
+            }
         }
         @media (max-width: 600px) {
             h1 { font-size: 1.5em; }
@@ -336,7 +339,7 @@
             </h1>
             
             <div class="toggle-control">
-                <span id="layout-emoji">1️⃣</span>
+                <span id="layout-emoji"><i class="fa-solid fa-1"></i></span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="layout-toggle" onchange="toggleLayout()">
                     <span class="slider"></span>
@@ -349,34 +352,34 @@
                 <h2>1. Select Network and Command</h2>
                 
                 <div class="selection-group">
-                    <label for="vendor-select">Network Vendor:</label>
+                    <label for="vendor-select"><i class="fa-solid fa-network-wired"></i> Network Vendor:</label>
                     <select id="vendor-select" onchange="updatePlatformOptions()"></select>
                 </div>
                 
                 <div class="selection-group">
-                    <label>Platform/OS:</label>
+                    <label><i class="fa-solid fa-server"></i> Platform/OS:</label>
                     <div id="platform-options" class="platform-options">
                         </div>
                 </div>
 
-                <label for="command-select">Command:</label>
+                <label for="command-select"><i class="fa-solid fa-terminal"></i> Command:</label>
                 <select id="command-select"></select>
                 
                 <div class="preview-settings" style="margin-top: 20px;">
-                    <label for="rows-to-display">Preview Rows:</label>
-                    <input type="number" id="rows-to-display" value="7" min="1" max="100">
+                    <label for="rows-to-display"><i class="fa-solid fa-table-list"></i> Preview Rows:</label>
+                    <input type="number" id="rows-to-display" value="8" min="1" max="100">
                 </div>
 
                 <br>
 
                 <h2>2. Paste Log Content & Run</h2>
                 <textarea id="log-input" placeholder="Paste your CLI output here..."></textarea>
-                <button onclick="processLog()">Run Conversion & Preview</button>
+                <button onclick="processLog()">Run Conversion & Preview <i class="fa-solid fa-angles-right"></i></button>
             </div>
 
             <div class="output">
                 <h2>3. Output</h2>
-                <button id="download-button" onclick="downloadCsvFromCache()" disabled>Download CSV</button>
+                <button id="download-button" onclick="downloadCsvFromCache()" disabled><i class="fas fa-download"></i>Download CSV</button>
                 
                 <h3 style="margin-top: 20px; color: #555;">Parsed Table Preview</h3>
                 <div class="table-wrapper">
@@ -386,7 +389,7 @@
                 <h3 style="margin-top: 20px; color: #555;">Raw JSON Output</h3>
                 
                 <div class="json-container">
-                    <button id="copy-json-button" onclick="copyJsonOutput()" disabled>Copy</button>
+                    <button id="copy-json-button" onclick="copyJsonOutput()" disabled><i class="fa-regular fa-copy"></i> Copy</button>
                     <pre id="json-output">No data parsed yet.</pre>
                 </div>
 
@@ -573,10 +576,10 @@
 
             if (toggle.checked) {
                 body.classList.add('two-column');
-                emojiSpan.textContent = '2️⃣'; // Two Column active
+                emojiSpan.innerHTML = '<i class="fa-solid fa-2"></i>'; // Two Column active
             } else {
                 body.classList.remove('two-column');
-                emojiSpan.textContent = '1️⃣'; // Single Column active
+                emojiSpan.innerHTML = '<i class="fa-solid fa-1"></i>'; // Single Column active
             }
         }
         
