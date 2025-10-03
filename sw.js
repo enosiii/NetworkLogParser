@@ -2,8 +2,8 @@ const CACHE_NAME = 'NetworkLogParser-v1';
 const ASSETS_TO_CACHE = [
   '/NetworkLogParser/',
   '/NetworkLogParser/index.html',
-  '/NetworkLogParser/icon192.png',
-  '/NetworkLogParser/icon512.png'
+  '/NetworkLogParser/images/icon192.png',
+  '/NetworkLogParser/images/icon512.png'
 ];
 
 // Install the service worker and cache assets
