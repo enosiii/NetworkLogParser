@@ -599,12 +599,12 @@
             // If the message is empty, just hide and exit
             if (!message) {
                 wrapper.classList.remove('show-alert');
-                container.textContent = '';
+                container.innerHTML = '';
                 return;
             }
 
             // 2. Set the message and styles
-            container.textContent = message;
+            container.innerHTML = message;
             container.className = 'status-container ' + (type === 'success' ? 'status-success' : type === 'error' ? 'status-error' : 'status-info');
             
             // 3. Show the floating alert
@@ -675,7 +675,7 @@
             cachedCsvData = "";
 
             if (!logContent) {
-                setStatus('Please paste log content.', 'error');
+                setStatus(`<i class="fa-solid fa-xmark"></i> Please paste log content.`, 'error');
                 document.getElementById('table-preview').innerHTML = 'No data parsed yet.';
                 jsonOutput.textContent = 'No data parsed yet.';
                 return;
@@ -692,7 +692,7 @@
 
 
                 if (jsonData.length === 0) {
-                    setStatus('⚠️ Parsing successful, but no records were extracted. Check your Platform/OS, Log, and Command', 'info');
+                    setStatus('<i class="fa-solid fa-triangle-exclamation"></i> Parsing successful, but no records were extracted. Check your Platform/OS, Log, and Command', 'info');
                     document.getElementById('table-preview').innerHTML = 'No records found.';
                     copyButton.disabled = true; 
                     return;
@@ -705,11 +705,11 @@
                 // 4. Display Preview
                 displayTablePreview(jsonData);
                 
-                setStatus(`✅ Successfully parsed ${jsonData.length} records.`, 'success');
+                setStatus(`<i class="fa-solid fa-check"></i> Successfully parsed ${jsonData.length} records.`, 'success');
                 downloadButton.disabled = false;
                 
             } catch (e) {
-                setStatus('❌ An error occurred during parsing: ' + e.message, 'error');
+                setStatus(`<i class="fa-solid fa-xmark"></i> An error occurred during parsing: ` + e.message, 'error');
                 document.getElementById('table-preview').innerHTML = 'Error during parsing.';
                 jsonOutput.textContent = 'Error during parsing: ' + e.message;
                 copyButton.disabled = true;
@@ -805,7 +805,7 @@
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            setStatus(`✅ File ${filename} downloaded successfully.`, 'success');
+            setStatus(`<i class="fa-solid fa-check"></i> File ${filename} downloaded successfully.`, 'success');
         }
 
     </script>
