@@ -1301,7 +1301,8 @@ const templates = {
         },
         "show platform": {
             "file": "cisco_ios_show_platform.textfsm",
-            "content": "Value INDEX (\\d+)\nValue PORTS (\\d+)\nValue MODEL (\\S+)\nValue SERIAL (\\S+)\nValue MAC (\\S+)\nValue HARDWARE_VERSION (\\S+)\nValue SOFTWARE_VERSION (\\d+\\.\\d+\\.\\d+)\n\nStart\n  ^Switch\\s+Ports\\s+Model\\s+Serial\\s+No\\.\\s+MAC\\s+address\\s+Hw\\s+Ver\\.\\s+Sw\\s+Ver\\.\\s*$$\n  ^(-+\\s*)+$$\n  ^\\s*${INDEX}\\s+${PORTS}\\s+${MODEL}\\s+${SERIAL}\\s+${MAC}\\s+${HARDWARE_VERSION}\\s+${SOFTWARE_VERSION}\\s* -> Record\n  ^\\s*$$\n  ^. -> Error\n"
+            "content": "Value Filldown CHASSIS_TYPE (.*)\nValue Required SLOT (\\S+)\nValue TYPE (.*?)\nValue STATE (.*?)\nValue INSERT_TIME (.*?)\nValue CPLD_VERSION (\\S+)\nValue FIRMWARE_VERSION (\\S+)\n\nStart\n  ^Chassis type:\\s+${CHASSIS_TYPE}\n  ^Slot\\s+Type\\s+State\\s+Insert -> Inventory\n  ^Slot\\s+CPLD\\s+Version\\s+Firmware -> Versions\n\nInventory\n  ^---------\n  ^\\s*${SLOT}\\s+${TYPE}\\s{2,}${STATE}\\s{2,}${INSERT_TIME}\\s*$$ -> Record\n  ^\\s*${SLOT}\\s{2,}(?P<STATE>.*(ok|active|standby|fail).*)\\s{2,}${INSERT_TIME}\\s*$$ -> Record\n  ^\\s*${SLOT}\\s{2,}${TYPE}\\s{2,}${INSERT_TIME}\\s*$$ -> Record\n  ^Slot\\s+CPLD\\s+Version\\s+Firmware -> Versions\n\nVersions\n  ^---------\n  ^\\s*${SLOT}\\s+${CPLD_VERSION}\\s+${FIRMWARE_VERSION}\\s*$$ -> Record\n"
+            //"content": "Value INDEX (\\d+)\nValue PORTS (\\d+)\nValue MODEL (\\S+)\nValue SERIAL (\\S+)\nValue MAC (\\S+)\nValue HARDWARE_VERSION (\\S+)\nValue SOFTWARE_VERSION (\\d+\\.\\d+\\.\\d+)\n\nStart\n  ^Switch\\s+Ports\\s+Model\\s+Serial\\s+No\\.\\s+MAC\\s+address\\s+Hw\\s+Ver\\.\\s+Sw\\s+Ver\\.\\s*$$\n  ^(-+\\s*)+$$\n  ^\\s*${INDEX}\\s+${PORTS}\\s+${MODEL}\\s+${SERIAL}\\s+${MAC}\\s+${HARDWARE_VERSION}\\s+${SOFTWARE_VERSION}\\s* -> Record\n  ^\\s*$$\n  ^. -> Error\n"
         },
         "show platform diag": {
             "file": "cisco_ios_show_platform_diag.textfsm",
