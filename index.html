@@ -394,7 +394,16 @@
                 <h2>3. Output</h2>
                 <button id="download-button" onclick="downloadCsvFromCache()" disabled><i class="fas fa-download"></i> Download CSV</button>
                 
-                <h3 style="margin-top: 20px; color: #555;">Parsed Table Preview</h3>
+                <!-- <h3 style="margin-top: 20px; color: #555;">Parsed Table Preview</h3>
+                <div class="table-wrapper">
+                    <div id="table-preview">No data parsed yet.</div>
+                </div> -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                    <h3 style="margin-color: #555; margin-bottom: 5px;">Parsed Table Preview</h3>
+                    <button id="copy-table-button" onclick="copyTableToClipboard()" disabled style="background-color: #6c757d; padding: 5px 10px; font-size: 0.85em;">
+                        <i class="fa-regular fa-copy"></i> Copy
+                    </button>
+                </div>
                 <div class="table-wrapper">
                     <div id="table-preview">No data parsed yet.</div>
                 </div>
@@ -416,8 +425,46 @@
 
     
 
-    <script src="template_data.js"></script> 
+    <script src="template_data.js"></script>
+
     <script>
+
+        async function copyTableToClipboard() {
+            const table = document.getElementById('parsed-results-table');
+            const copyBtn = document.getElementById('copy-table-button');
+            
+            if (!table) return;
+
+            try {
+                // Use outerHTML which now contains all the inline style="" attributes
+                const blobHtml = new Blob([table.outerHTML], { type: 'text/html' });
+                const blobText = new Blob([table.innerText], { type: 'text/plain' });
+
+                const data = [
+                    new ClipboardItem({
+                        'text/html': blobHtml,
+                        'text/plain': blobText
+                    })
+                ];
+
+                await navigator.clipboard.write(data);
+
+                // Success UI
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+                copyBtn.style.backgroundColor = '#28a745';
+                setStatus('Table copied with styles!', 'success');
+
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.style.backgroundColor = '#17a2b8';
+                }, 2000);
+
+            } catch (err) {
+                setStatus('Copy failed. Please try again.', 'error');
+            }
+        }
+
         let cachedCsvData = "";
         let statusTimeout = null; // Variable to hold the timeout reference
 
@@ -666,6 +713,7 @@
             const downloadButton = document.getElementById('download-button');
             const jsonOutput = document.getElementById('json-output');
             const copyButton = document.getElementById('copy-json-button'); 
+            const copyTableBtn = document.getElementById('copy-table-button');
             
             if (!platform || !command || !templates[platform] || !templates[platform][command]) {
                 setStatus('Please select a valid platform and command.', 'error');
@@ -679,6 +727,7 @@
             setStatus('Processing...', 'info');
             downloadButton.disabled = true;
             copyButton.disabled = true;
+            copyTableBtn.disabled = true;
             document.getElementById('table-preview').innerHTML = 'Processing...';
             jsonOutput.textContent = 'Processing...';
             cachedCsvData = "";
@@ -699,11 +748,15 @@
                 jsonOutput.textContent = JSON.stringify(jsonData, null, 2);
                 copyButton.disabled = false;
 
+                // Enable Copy Table Button
+                copyTableBtn.disabled = false;
+
 
                 if (jsonData.length === 0) {
                     setStatus('<i class="fa-solid fa-triangle-exclamation"></i> Parsing successful, but no records were extracted. Check your Platform/OS, Log, and Command', 'info');
                     document.getElementById('table-preview').innerHTML = 'No records found.';
                     copyButton.disabled = true; 
+                    copyTableBtn.disabled = true;
                     return;
                 }
                 
@@ -726,16 +779,59 @@
             }
         }
 
+        // function displayTablePreview(jsonData) {
+        //     const previewDiv = document.getElementById('table-preview');
+        //     const maxRowsInput = document.getElementById('rows-to-display').value;
+        //     const maxRows = Math.max(1, parseInt(maxRowsInput) || 7);
+            
+        //     const headers = Object.keys(jsonData[0]);
+        //     // Change the line that starts the table HTML to include an ID:
+        //     let html = '<table id="parsed-results-table"><thead><tr>';
+        //     //let html = '<table><thead><tr>';
+        //     headers.forEach(header => {
+        //         html += `<th>${header}</th>`;
+        //     });
+        //     html += '</tr></thead><tbody>';
+
+        //     const rowsToShow = jsonData.slice(0, maxRows);
+        //     rowsToShow.forEach(row => {
+        //         html += '<tr>';
+        //         headers.forEach(header => {
+        //             const value = Array.isArray(row[header]) ? row[header].join('; ') : row[header];
+        //             html += `<td>${value}</td>`;
+        //         });
+        //         html += '</tr>';
+        //     });
+
+        //     html += '</tbody></table>';
+
+        //     if (jsonData.length > maxRows) {
+        //         html += `<p style="margin-top:10px;">... Showing first ${maxRows} of ${jsonData.length} total records.</p>`;
+        //     } else if (jsonData.length > 0) {
+        //         html += `<p style="margin-top:10px;">Showing all ${jsonData.length} total records.</p>`;
+        //     }
+
+        //     previewDiv.innerHTML = html;
+        // }
+
+
         function displayTablePreview(jsonData) {
             const previewDiv = document.getElementById('table-preview');
             const maxRowsInput = document.getElementById('rows-to-display').value;
             const maxRows = Math.max(1, parseInt(maxRowsInput) || 7);
             
             const headers = Object.keys(jsonData[0]);
-            let html = '<table><thead><tr>';
+            
+            // 1. ADD ID AND INLINE TABLE STYLES
+            let html = '<table id="parsed-results-table" style="border-collapse: collapse; min-width: 600px; font-family: sans-serif;">';
+            html += '<thead><tr>';
+            
             headers.forEach(header => {
-                html += `<th>${header}</th>`;
+                // 2. ADD INLINE HEADER STYLES (Excel requires background-color and color)
+                //html += `<th style="background-color: #0D0D0D; color: #ffffff; border: 1px solid #000000; padding: 12px 15px; text-align: center; font-weight: bold;">${header}</th>`;
+                html += `<th style="background-color: #0D0D0D; color: #ffffff; border: 1px solid #000000; padding: 8px; text-align: center; font-weight: bold; font-size: 0.9em; white-space: nowrap; vertical-align: top;">${header}</th>`;
             });
+            
             html += '</tr></thead><tbody>';
 
             const rowsToShow = jsonData.slice(0, maxRows);
@@ -743,7 +839,9 @@
                 html += '<tr>';
                 headers.forEach(header => {
                     const value = Array.isArray(row[header]) ? row[header].join('; ') : row[header];
-                    html += `<td>${value}</td>`;
+                    // 3. ADD INLINE CELL STYLES
+                    //html += `<td style="border: 1px solid #000000; padding: 12px 15px; text-align: left;">${value}</td>`;
+                    html += `<td style="border: 1px solid #000000; padding: 8px; text-align: left; font-size: 0.9em; white-space: nowrap; vertical-align: top;">${value}</td>`;
                 });
                 html += '</tr>';
             });
