@@ -294,6 +294,43 @@
             transform: translateY(0);
         }
 
+        /* Upload & Clear Button Styles */
+        .upload-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .upload-btn {
+            background-color: #6c757d;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        .upload-btn:hover:not(:disabled) {
+            background-color: #5a6268;
+        }
+        .file-name {
+            color: #28a745;
+            font-size: 0.9em;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .clear-btn {
+            background-color: #dc3545;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        .clear-btn:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+        textarea.drag-over {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+            background-color: #f0f8ff;
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 900px) { /* Two-column view disabled below 900px */
             .two-column .main-content {
@@ -386,6 +423,16 @@
                 <br>
 
                 <h2>2. Paste Log Content & Run</h2>
+                <div class="upload-row">
+                    <input type="file" id="file-input" accept="*/*" style="display:none">
+                    <button id="upload-btn" class="upload-btn" onclick="document.getElementById('file-input').click()">
+                        <i class="fa-solid fa-upload"></i> Upload File
+                    </button>
+                    <span id="file-name" class="file-name"></span>
+                    <button id="clear-btn" class="clear-btn" onclick="clearLogInput()" title="Clear input">
+                        <i class="fa-solid fa-eraser"></i> Clear
+                    </button>
+                </div>
                 <textarea id="log-input" placeholder="Paste your CLI output here..."></textarea>
                 <button onclick="processLog()">Run Conversion & Preview <i class="fa-solid fa-angles-right"></i></button>
             </div>
@@ -705,6 +752,60 @@
             });
         }
         // End of Copy JSON Output Function
+
+        // --- File Upload & Clear Functions ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('file-input');
+            const logInput = document.getElementById('log-input');
+
+            fileInput.addEventListener('change', handleFileUpload);
+
+            logInput.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+
+            logInput.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+            });
+
+            logInput.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    readFileAndSetContent(file);
+                }
+            });
+        });
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                readFileAndSetContent(file);
+            }
+            event.target.value = '';
+        }
+
+        function readFileAndSetContent(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('log-input').value = e.target.result;
+                const fileName = file.name;
+                const fileSize = (file.size / 1024).toFixed(1);
+                document.getElementById('file-name').textContent = fileName + ' (' + fileSize + ' KB)';
+                setStatus('<i class="fa-solid fa-check"></i> File "' + fileName + '" loaded (' + fileSize + ' KB).', 'success');
+            };
+            reader.readAsText(file);
+        }
+
+        function clearLogInput() {
+            document.getElementById('log-input').value = '';
+            document.getElementById('file-name').textContent = '';
+            document.getElementById('file-input').value = '';
+            setStatus('Input cleared.', 'info');
+        }
 
         function processLog() {
             const platform = getSelectedPlatform();
