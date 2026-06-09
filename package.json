@@ -1,0 +1,9 @@
+{
+  "name": "network-log-parser",
+  "version": "1.0.0",
+  "description": "Network Log Parser & Converter using TextFSM",
+  "private": true,
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

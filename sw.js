@@ -3,7 +3,11 @@ const ASSETS_TO_CACHE = [
   '/NetworkLogParser/',
   '/NetworkLogParser/index.html',
   '/NetworkLogParser/images/icon192.png',
-  '/NetworkLogParser/images/icon512.png'
+  '/NetworkLogParser/images/icon512.png',
+  '/NetworkLogParser/tfsm.js',
+  '/NetworkLogParser/template_data.js',
+  '/NetworkLogParser/install.js',
+  '/NetworkLogParser/manifest.json'
 ];
 
 // Install the service worker and cache assets

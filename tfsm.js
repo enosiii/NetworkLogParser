@@ -850,49 +850,6 @@ _validateFSM() {
   return true;
 }
 
-parseText(text, eof = true) {
-  if (!text) {
-    return this._result;
-  }
-
-  // Normalize line endings and handle encoding
-  let processedText = text;
-  if (typeof text !== 'string') {
-    try {
-      processedText = new TextDecoder('utf-8').decode(text);
-    } catch (e) {
-      // Fallback for older browsers
-      processedText = text.toString();
-    }
-  }
-
-  // Split text into lines, handling different line endings
-  const lines = processedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-
-  // Process each line
-  for (const line of lines) {
-    this._processLine(line);
-    if (this._curStateName === 'End') {
-      break;
-    }
-  }
-
-  // Handle EOF state if it exists
-  if (this._curStateName !== 'End' && eof) {
-    if ('EOF' in this.states) {
-      // Process rules in the EOF state
-      this._curState = this.states['EOF'];
-      this._curStateName = 'EOF';
-      this._processLine(''); // Process with empty line to trigger EOF rules
-    } else {
-      // No EOF state defined, just append the current record
-      this._appendRecord();
-    }
-  }
-
-  return this._result;
-}
-
   _processLine(line) {
     // Pre-process the line before checking rules
     const trimmedLine = this._preprocessLine(line);
