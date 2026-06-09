@@ -74,6 +74,7 @@
             padding: 10px; 
             background-color: var(--bg-body);
             color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
         }
         .header-bar {
             display: flex;
@@ -114,6 +115,7 @@
             border-radius: 8px; 
             background-color: var(--card-bg);
             box-shadow: var(--card-shadow);
+            transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
         }
         
         /* Header Styling */
@@ -125,6 +127,7 @@
             border-bottom: 2px solid var(--heading-border); 
             padding-bottom: 5px; 
             margin-bottom: 20px; 
+            transition: border-color 0.3s;
         }
         #installPWA {
             vertical-align: middle; 
@@ -184,6 +187,7 @@
             resize: vertical;
             background-color: var(--card-bg);
             color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
 
         /* --- Floating Status Message (Updated) --- */
@@ -604,7 +608,8 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
                     <h3 style="color: #555; margin-bottom: 5px;">Parsed Table Preview</h3>
                     <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="text" id="table-filter" placeholder="Filter..." style="padding:4px 8px; font-size:0.85em; border:1px solid var(--input-border); border-radius:4px; background:var(--card-bg); color:var(--text-color); width:120px;" oninput="filterTable()">
+                        <input type="text" id="table-filter" placeholder="Filter..." style="padding:4px 8px; font-size:0.85em; border:1px solid var(--input-border); border-radius:4px; background:var(--card-bg); color:var(--text-color); width:120px;" oninput="debouncedFilter()">
+                        <span id="results-count-badge" style="font-size:0.85em; color:var(--text-color); opacity:0.7; white-space:nowrap;">0 / 0</span>
                         <div class="col-vis-toggle" style="position:relative;">
                             <button id="col-vis-btn" onclick="toggleColDropdown()" disabled style="background-color:var(--btn-copy-bg); color:#fff; border:none; padding:4px 8px; font-size:0.85em; border-radius:4px; cursor:pointer; line-height:1.2;"><i class="fa-solid fa-eye"></i></button>
                             <div id="col-vis-dropdown" style="display:none; position:absolute; right:0; top:100%; background:var(--card-bg); border:1px solid var(--card-border); border-radius:6px; padding:8px; z-index:100; min-width:160px; max-height:250px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
@@ -692,6 +697,8 @@
         let cachedJsonData = null;
         let cachedHeaders = [];
         let columnVisibility = {};
+        let sortCol = null;
+        let sortDir = 'asc';
         let statusTimeout = null;
 
         // Vendor platforms data (kept for completeness)
@@ -1075,6 +1082,8 @@
             document.getElementById('file-name').textContent = '';
             document.getElementById('file-input').value = '';
             cachedJsonData = null;
+            sortCol = null;
+            sortDir = 'asc';
             setStatus('Input cleared.', 'info');
         }
 
@@ -1182,6 +1191,7 @@
             const maxRowsInput = document.getElementById('rows-to-display').value;
             const maxRows = Math.max(1, parseInt(maxRowsInput) || 7);
             const filterText = (document.getElementById('table-filter').value || '').toLowerCase().trim();
+            const countBadge = document.getElementById('results-count-badge');
 
             const headers = cachedHeaders.length ? cachedHeaders : Object.keys(jsonData[0]);
             const visHeaders = headers.filter(h => columnVisibility[h] !== false);
@@ -1196,10 +1206,23 @@
                 );
             }
 
+            if (sortCol !== null && headers.includes(sortCol)) {
+                const desc = sortDir === 'desc' ? -1 : 1;
+                filtered = [...filtered].sort((a, b) => {
+                    const av = Array.isArray(a[sortCol]) ? a[sortCol].join('; ') : String(a[sortCol] ?? '');
+                    const bv = Array.isArray(b[sortCol]) ? b[sortCol].join('; ') : String(b[sortCol] ?? '');
+                    return av.localeCompare(bv, undefined, { numeric: true }) * desc;
+                });
+            }
+
+            function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
             let html = '<table id="parsed-results-table" style="border-collapse: collapse; min-width: 600px; font-family: sans-serif;">';
             html += '<thead><tr>';
             visHeaders.forEach(header => {
-                html += `<th style="background-color: var(--table-header-bg); color: var(--table-header-color); border: 1px solid var(--table-border); padding: 8px; text-align: center; font-weight: bold; font-size: 0.9em; white-space: nowrap; vertical-align: top;">${header}</th>`;
+                const isSorted = sortCol === header;
+                const arrow = isSorted ? (sortDir === 'asc' ? ' &#9650;' : ' &#9660;') : '';
+                html += `<th class="sortable-th" data-col="${esc(header)}" style="cursor:pointer; background-color: var(--table-header-bg); color: var(--table-header-color); border: 1px solid var(--table-border); padding: 8px; text-align: center; font-weight: bold; font-size: 0.9em; white-space: nowrap; vertical-align: top; user-select:none;">${esc(header)}${arrow}</th>`;
             });
             html += '</tr></thead><tbody>';
 
@@ -1207,24 +1230,44 @@
             rowsToShow.forEach(row => {
                 html += '<tr>';
                 visHeaders.forEach(header => {
-                    const value = Array.isArray(row[header]) ? row[header].join('; ') : row[header];
-                    html += `<td style="border: 1px solid var(--table-border); padding: 8px; text-align: left; font-size: 0.9em; white-space: nowrap; vertical-align: top;">${value ?? ''}</td>`;
+                    const raw = row[header];
+                    let value = raw != null ? (Array.isArray(raw) ? raw.join('; ') : raw) : '';
+                    html += `<td style="border: 1px solid var(--table-border); padding: 8px; text-align: left; font-size: 0.9em; white-space: nowrap; vertical-align: top;">${esc(value)}</td>`;
                 });
                 html += '</tr>';
             });
 
             html += '</tbody></table>';
 
+            const totalUnfiltered = jsonData.length;
             const showing = rowsToShow.length;
             const total = filtered.length;
-            if (total > showing) {
+            if (countBadge) countBadge.textContent = `${total} / ${totalUnfiltered}`;
+
+            if (total === 0) {
+                html += `<p style="margin-top:10px; color:var(--text-color); opacity:0.6;">No matching records${filterText ? '.' : ' to display.'}</p>`;
+            } else if (total > showing) {
                 html += `<p style="margin-top:10px;">... Showing first ${showing} of ${total} record${total === 1 ? '' : 's'}${filterText ? ' (filtered)' : ''}.</p>`;
-            } else if (total > 0) {
+            } else {
                 html += `<p style="margin-top:10px;">Showing all ${total} record${total === 1 ? '' : 's'}${filterText ? ' (filtered)' : ''}.</p>`;
             }
 
             previewDiv.innerHTML = html;
         }
+
+        document.addEventListener('click', e => {
+            const th = e.target.closest('.sortable-th');
+            if (!th) return;
+            const col = th.dataset.col;
+            if (!col) return;
+            if (sortCol === col) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortCol = col;
+                sortDir = 'asc';
+            }
+            if (cachedJsonData) displayTablePreview(cachedJsonData);
+        });
 
         function updatePreview() {
             if (cachedJsonData) {
@@ -1234,6 +1277,12 @@
 
         function filterTable() {
             updatePreview();
+        }
+
+        let filterDebounceTimer = null;
+        function debouncedFilter() {
+            clearTimeout(filterDebounceTimer);
+            filterDebounceTimer = setTimeout(filterTable, 200);
         }
 
         function rebuildColDropdown() {
@@ -1275,9 +1324,9 @@
 
         // --- CSV / XLSX Download Functions ---
 
-        const jsonToCsv = (data) => {
+        const jsonToCsv = (data, visibleHeaders) => {
             if (data.length === 0) return '';
-            const headers = Object.keys(data[0]);
+            const headers = visibleHeaders || Object.keys(data[0]);
             
             const escapeValue = (value) => {
                 if (value === null || value === undefined) return '';
@@ -1299,7 +1348,7 @@
         };
 
         function downloadCsvFromCache() {
-            if (!cachedCsvData) {
+            if (!cachedJsonData || !cachedJsonData.length) {
                 setStatus('Error: No data to download.', 'error');
                 return;
             }
@@ -1313,7 +1362,11 @@
             
             const filename = `${platform}_${command}_${dateStr}_${timeStr}.csv`;
 
-            const blob = new Blob([cachedCsvData], { type: 'text/csv;charset=utf-8;' });
+            const headers = cachedHeaders.length ? cachedHeaders : Object.keys(cachedJsonData[0]);
+            const visHeaders = headers.filter(h => columnVisibility[h] !== false);
+            const csvData = jsonToCsv(cachedJsonData, visHeaders);
+
+            const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
             
@@ -1347,9 +1400,14 @@
                 workbook.creator = 'Network Log Parser';
                 const ws = workbook.addWorksheet('Parsed Data');
 
-                const headers = Object.keys(cachedJsonData[0]);
-                ws.columns = headers.map(h => ({ header: h, key: h, width: 20 }));
-                cachedJsonData.forEach(row => ws.addRow(row));
+                const allHeaders = cachedHeaders.length ? cachedHeaders : Object.keys(cachedJsonData[0]);
+                const visHeaders = allHeaders.filter(h => columnVisibility[h] !== false);
+                ws.columns = visHeaders.map(h => ({ header: h, key: h, width: 20 }));
+                cachedJsonData.forEach(row => {
+                    const filtered = {};
+                    visHeaders.forEach(h => { filtered[h] = row[h]; });
+                    ws.addRow(filtered);
+                });
 
                 ws.getRow(1).eachCell(cell => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D0D0D' } };
