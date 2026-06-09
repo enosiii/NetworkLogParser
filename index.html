@@ -483,10 +483,19 @@
             h2 { font-size: 1.2em; }
             .controls, .output { padding: 15px; }
             .selection-group, .platform-options label { margin-bottom: 8px; }
-            select, button { width: 40%; margin-bottom: 10px;}
-            input[type="number"] { width: 10%; margin-bottom: 10px; text-align: center;}
+            select { width: 100%; margin-bottom: 10px; box-sizing: border-box; }
+            button:not(.sortable-th):not(#copy-json-button) { width: 100%; margin-bottom: 8px; box-sizing: border-box; }
+            input[type="number"] { width: 80px; margin-bottom: 10px; text-align: center; }
             .preview-settings { flex-direction: column; align-items: flex-start; }
             .preview-settings label, .preview-settings input { margin: 5px 0; }
+            .output-toolbar { flex-direction: column; }
+            .upload-row { flex-wrap: wrap; }
+            .upload-row button { width: auto; flex: 1; min-width: 100px; }
+            .output > div[style*="flex"] { flex-wrap: wrap; gap: 8px !important; }
+            .output > div[style*="flex"] h3 { width: 100%; }
+            #table-filter { width: 100% !important; }
+            .platform-options { display: flex; flex-wrap: wrap; gap: 4px; }
+            .platform-options label { margin-right: 0; padding: 4px 0; white-space: nowrap; }
         }
 
         /* --- Footer Styling --- */
@@ -573,7 +582,7 @@
                 
                 <div class="preview-settings" style="margin-top: 20px;">
                     <label for="rows-to-display"><i class="fa-solid fa-table-list"></i> Preview Rows:</label>
-                    <input type="number" id="rows-to-display" value="8" min="1" max="99999" onchange="updatePreview()">
+                    <input type="number" id="rows-to-display" value="8" min="1" max="99999" onchange="updatePreview(); saveSession();">
                 </div>
 
                 <br>
@@ -590,10 +599,10 @@
                     </button>
                 </div>
                 <div class="textarea-wrap">
-                    <textarea id="log-input" placeholder="Paste your CLI output here..."></textarea>
+                    <textarea id="log-input" placeholder="Paste your CLI output here... Or drop your file here"></textarea>
                     <div class="drop-hint"><i class="fa-solid fa-cloud-arrow-up"></i> Drop file here</div>
                 </div>
-                <button id="run-btn" onclick="processLog()">Run Conversion & Preview <i class="fa-solid fa-angles-right"></i></button>
+                <button id="run-btn" onclick="processLog()">Run Conversion <i class="fa-solid fa-angles-right"></i></button>
             </div>
 
             <div class="output">
@@ -915,15 +924,18 @@
             const platform = getSelectedPlatform();
             const command = document.getElementById('command-select')?.value;
             const log = document.getElementById('log-input')?.value;
+            const rows = document.getElementById('rows-to-display')?.value;
             if (vendor) localStorage.setItem('session_vendor', vendor);
             if (platform) localStorage.setItem('session_platform', platform);
             if (command) localStorage.setItem('session_command', command);
             if (log) localStorage.setItem('session_log', log);
+            if (rows) localStorage.setItem('session_rows', rows);
         }
 
         function restoreSession() {
             const vendor = localStorage.getItem('session_vendor');
             const log = localStorage.getItem('session_log');
+            const rows = localStorage.getItem('session_rows');
             if (vendor) {
                 document.getElementById('vendor-select').value = vendor;
                 const platform = localStorage.getItem('session_platform');
@@ -935,6 +947,7 @@
                 }
             }
             if (log) document.getElementById('log-input').value = log;
+            if (rows) document.getElementById('rows-to-display').value = rows;
         }
         
         /**
@@ -1084,6 +1097,7 @@
             cachedJsonData = null;
             sortCol = null;
             sortDir = 'asc';
+            ['session_vendor','session_platform','session_command','session_log'].forEach(k => localStorage.removeItem(k));
             setStatus('Input cleared.', 'info');
         }
 
